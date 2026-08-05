@@ -60,7 +60,7 @@ def home():
         .msg-item {{ padding: 8px 14px; border-radius: 8px; max-width: 80%; font-size: 15px; }}
         .msg-item.system {{ background: #1e293b; color: #94a3b8; font-size: 13px; text-align: center; }}
         .msg-item.user {{ background: #1e40af; color: #ffffff; }}
-        .input-area {{ display: flex; gap: 10px; }}
+        
         input {{ flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #1e293b; background: #0f172a; color: white; font-size: 15px; }}
         button {{ padding: 12px 20px; border-radius: 6px; border: none; background: #38bdf8; color: #020617; font-weight: bold; cursor: pointer; }}
     </style>
