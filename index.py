@@ -12,6 +12,22 @@ def clean_room_name(name):
     if not name:
         return "main"
     return str(name).strip().lower()
+users_db = {}
+
+@app.route('/api/auth', methods=['POST'])
+def api_auth():
+    data = request.json or {}
+    user = str(data.get('username', '')).strip().lower()
+    passw = str(data.get('password', '')).strip()
+    if not user or not passw:
+        return jsonify({"status": "error", "message": "Заполните все поля!"}), 400
+    if user in users_db:
+        if users_db[user] == passw:
+            return jsonify({"status": "success", "username": user}), 200
+        return jsonify({"status": "error", "message": "Неверный пароль!"}), 401
+    users_db[user] = passw
+    return jsonify({"status": "success", "username": user}), 201
+
 
 @app.route('/api/send_message', methods=['POST'])
 def send_message():
@@ -125,6 +141,42 @@ def home():
                     window.location.reload();
                 }}
             } catch (err) { console.error(err); }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedUser = localStorage.getItem("f_user");
+            if (savedUser) {
+                document.getElementById("authOverlay").style.display = "none";
+                document.getElementById("userBadge").innerText = "@" + savedUser;
+            }
+            if (localStorage.getItem("f_theme") === "light") {
+                document.body.classList.add("light-theme");
+            }
+        });
+
+        function toggleTheme() {
+            document.body.classList.toggle("light-theme");
+            localStorage.setItem("f_theme", document.body.classList.contains("light-theme") ? "light" : "dark");
+        }
+
+        async function loginUser() {
+            const user = document.getElementById("usernameInput").value.trim();
+            const pass = document.getElementById("passwordInput").value.trim();
+            if (!user || !pass) return alert("Заполните поля!");
+            let res = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
+            let data = await res.json();
+            if (res.ok) {
+                localStorage.setItem("f_user", data.username);
+                window.location.reload();
+            } else { alert(data.message); }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
         }
 
     </script>
