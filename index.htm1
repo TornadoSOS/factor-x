@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factor X Messenger</title>
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .chat-box { border: 1px solid #333; max-width: 400px; margin: 0 auto; padding: 20px; background: #1e1e1e; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="chat-box">
+        <h2>Factor X</h2>
+        <p>Добро пожаловать в мессенджер!</p>
+        <p>Сервер успешно подключен.</p>
+    </div>
+</body>
+</html>
