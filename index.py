@@ -1,17 +1,21 @@
 import os
 from flask import Flask, request, jsonify
-# Подключаем функцию из твоего нового файла tools.py!
 from tools import get_server_time
 
 app = Flask(__name__)
 
-favorites_db = []
+# Наша серверная база данных (пока сервер работает, она всё помнит)
+favorites_db = ["Первое системное сообщение Factor X"]
 
 @app.route('/')
 def home():
-    # Получаем точное время с сервера через твой скрипт
     current_time = get_server_time()
     
+    # Сюда мы передадим все заметки из базы данных Python
+    notes_html = ""
+    for note in favorites_db:
+        notes_html += f'<div class="note-item">{note}</div>'
+
     return f"""
     <!DOCTYPE html>
     <html lang="ru">
@@ -28,31 +32,28 @@ def home():
             button {{ padding: 10px 20px; background: #4CAF50; border: none; border-radius: 5px; color: white; cursor: pointer; font-weight: bold; }}
             .tg-button {{ display: inline-block; padding: 12px 24px; background: #24A1DE; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px; }}
             .notes-list {{ text-align: left; background: #252525; padding: 10px; border-radius: 5px; max-height: 150px; overflow-y: auto; }}
-            .note-item {{ border-bottom: 1px solid #333; padding: 5px 0; font-size: 14px; }}
+            .note-item {{ border-bottom: 1px solid #333; padding: 5px 0; font-size: 14px; color: #fff; }}
         </style>
     </head>
     <body>
         <div class="container">
-            <!-- Чат Factor X + Время из tools.py -->
             <div class="card">
                 <h2>Factor X</h2>
                 <p>Добро пожаловать в мессенджер!</p>
                 <p style="color: #4CAF50; font-size: 14px;">Время запуска сервера: {current_time}</p>
             </div>
 
-            <!-- Избранное -->
             <div class="card">
-                <h3>📁 Избранное</h3>
+                <h3>📁 Избранное (База Python)</h3>
                 <input type="text" id="noteInput" placeholder="Напишите заметку...">
-                <button onclick="saveNote()">Сохранить</button>
+                <button onclick="sendToServer()">Отправить в базу</button>
                 <div style="margin-top: 15px;">
                     <div class="notes-list" id="notesContainer">
-                        <div class="note-item" style="color: #888;">Заметок пока нет...</div>
+                        {notes_html}
                     </div>
                 </div>
             </div>
 
-            <!-- Инструктор в ТГ -->
             <div class="card">
                 <h3>🤖 Помощь по проекту</h3>
                 <p style="font-size: 14px; color: #aaa;">Нужна помощь? Переходи к нашему официальному инструктору в Telegram.</p>
@@ -61,28 +62,38 @@ def home():
         </div>
 
         <script>
-            function saveNote() {{
+            // Функция отправляет текст на твой Python-сервер
+            async function sendToServer() {{
                 const input = document.getElementById('noteInput');
                 const text = input.value.trim();
                 if (!text) return;
 
-                const container = document.getElementById('notesContainer');
-                if (container.innerText === 'Заметок пока нет...') {{
-                    container.innerHTML = '';
+                // Отправляем POST-запрос в Python
+                const response = await fetch('/send_message', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ message: text, user_id: 'Пользователь' }})
+                }});
+
+                const result = await response.json();
+                if (result.status === 'success') {{
+                    // Просто обновляем страницу, чтобы сервер прислал новый список из базы
+                    location.reload();
                 }}
-
-                const div = document.createElement('div');
-                div.className = 'note-item';
-                div.innerText = text;
-                container.appendChild(div);
-
-                input.value = '';
             }}
         </script>
     </body>
     </html>
     """
 
-@app.route('/get_messages', methods=['GET'])
-def get_messages():
-    return jsonify(favorites_db)
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    data = request.json or {}
+    message_text = data.get('message')
+    
+    if message_text:
+        # Добавляем в нашу базу данных на Python!
+        favorites_db.append(message_text)
+        return jsonify({"status": "success"})
+        
+    return jsonify({"status": "error"})
