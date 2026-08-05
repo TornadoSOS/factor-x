@@ -3,13 +3,12 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Функция очистки прямо внутри файла, чтобы Vercel не ругался
 def clean_room_name(name):
     if not name:
         return "main"
     return str(name).strip().lower().replace(" ", "-")
 
-# Временная база данных для пользователей и сообщений
+# База данных пользователей и комнат
 users_db = {}
 rooms_db = {
     "main": ["Система: Добро пожаловать в главный чат Factor X!"]
@@ -45,12 +44,14 @@ def home():
             .note-item {{ border-bottom: 1px solid #333; padding: 5px 0; font-size: 14px; color: #fff; }}
             .room-badge {{ display: inline-block; background: #ff9800; color: black; padding: 3px 8px; border-radius: 3px; font-weight: bold; font-size: 12px; }}
             .hidden {{ display: none; }}
+            .logout-btn {{ background: #ff5252; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 10px; font-weight: bold; width: auto; display: inline-block; }}
+            .logout-btn:hover {{ background: #e04444; }}
         </style>
     </head>
     <body>
         <div class="container">
             
-            <!-- ОКНО ВХОДА / РЕГИСТРАЦИИ -->
+            <!-- ОКНО ВХОДА -->
             <div id="authScreen" class="card">
                 <h2>Factor X 🔑</h2>
                 <p>Введите имя и пароль для входа или создания аккаунта</p>
@@ -60,11 +61,14 @@ def home():
                 <p id="authError" style="color: #ff5252; font-size: 12px; margin-top: 10px;"></p>
             </div>
 
-            <!-- ИНТЕРФЕЙС МЕССЕНДЖЕРА (СКРЫТ ДО ВХОДА) -->
+            <!-- ИНТЕРФЕЙС МЕССЕНДЖЕРА -->
             <div id="mainScreen" class="hidden">
                 <div class="card">
                     <h2>Factor X</h2>
-                    <p>Привет, <span id="userBadge" style="color: #4CAF50; font-weight: bold;"></span>!</p>
+                    <p style="margin-bottom: 5px;">
+                        Привет, <span id="userBadge" style="color: #4CAF50; font-weight: bold;"></span>!
+                        <button onclick="logoutWithPassword()" class="logout-btn">Выйти</button>
+                    </p>
                     <p>Комната: <span class="room-badge">#{room_id}</span></p>
                 </div>
 
@@ -96,6 +100,29 @@ def home():
                 document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('mainScreen').classList.remove('hidden');
                 document.getElementById('userBadge').innerText = username;
+            }}
+
+            // Проверка пароля перед выходом
+            async function logoutWithPassword() {{
+                const currentUser = localStorage.getItem('fx_user');
+                const passwordCheck = prompt("Безопасный выход! Введите ваш текущий пароль для подтверждения:");
+                
+                if (passwordCheck === null) return; // Нажал отмену
+
+                // Отправляем пароль на сервер для сверки
+                const response = await fetch('/auth', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ username: currentUser, password: passwordCheck }})
+                }});
+
+                const result = await response.json();
+                if (result.status === 'success') {{
+                    localStorage.removeItem('fx_user');
+                    location.reload();
+                }} else {{
+                    alert("Ошибка! Неверный пароль. Выход заблокирован.");
+                }}
             }}
 
             async function loginOrRegister() {{
