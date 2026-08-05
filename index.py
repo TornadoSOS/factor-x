@@ -1,19 +1,22 @@
 import os
 from flask import Flask, request, jsonify
-from tools import get_server_time, clean_room_name
 
 app = Flask(__name__)
 
+# Функция очистки прямо внутри файла, чтобы Vercel не ругался
+def clean_room_name(name):
+    if not name:
+        return "main"
+    return str(name).strip().lower().replace(" ", "-")
+
 # Временная база данных для пользователей и сообщений
-# (Пока сервер не перезагрузится, он всё помнит!)
-users_db = {}  # Структура: {"имя": "пароль"}
+users_db = {}
 rooms_db = {
     "main": ["Система: Добро пожаловать в главный чат Factor X!"]
 }
 
 @app.route('/')
 def home():
-    current_time = get_server_time()
     room_name = request.args.get('room', 'main')
     room_id = clean_room_name(room_name)
     
@@ -63,7 +66,6 @@ def home():
                     <h2>Factor X</h2>
                     <p>Привет, <span id="userBadge" style="color: #4CAF50; font-weight: bold;"></span>!</p>
                     <p>Комната: <span class="room-badge">#{room_id}</span></p>
-                    <p style="color: #888; font-size: 11px;">Время сервера: {current_time}</p>
                 </div>
 
                 <div class="card">
@@ -85,7 +87,6 @@ def home():
         </div>
 
         <script>
-            // Проверяем, входил ли пользователь ранее (чтобы не вводить каждый раз при обновлении)
             const savedUser = localStorage.getItem('fx_user');
             if (savedUser) {{
                 showMainScreen(savedUser);
@@ -115,7 +116,7 @@ def home():
 
                 const result = await response.json();
                 if (result.status === 'success') {{
-                    localStorage.setItem('fx_user', user); // Запоминаем в браузере телефона
+                    localStorage.setItem('fx_user', user);
                     showMainScreen(user);
                 }} else {{
                     errorBlock.innerText = result.message;
@@ -163,14 +164,12 @@ def auth():
     if not user or not password:
         return jsonify({"status": "error", "message": "Пустые данные"})
         
-    # Логика регистрации и входа
     if user in users_db:
         if users_db[user] == password:
             return jsonify({"status": "success"})
         else:
-            return jsonify({"status": "error", "message": "Неверный пароль для этого имени!"})
+            return jsonify({"status": "error", "message": "Неверный пароль!"})
     else:
-        # Если пользователя нет, регистрируем его с этим паролем
         users_db[user] = password
         return jsonify({"status": "success"})
 
