@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factor X // Core</title>
+    <style>
+        /* Глобальные настройки — Космический глубокий синий */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #020617; /* Сверхтемный синий */
+            color: #f8fafc; /* Чистый белый текст */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Корпус мессенджера */
+        .messenger-container {
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            background-color: #0b132b; /* Глубокий темно-синий */
+            border-left: 1px solid #1e293b;
+            border-right: 1px solid #1e293b;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Шапка */
+        .chat-header {
+            padding: 20px;
+            background-color: #1c2541; /* Контрастный темно-синий */
+            border-bottom: 2px solid #3a86ff; /* Яркий синий акцент */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 1.5px;
+        }
+
+        .system-badge {
+            font-size: 11px;
+            font-weight: 600;
+            color: #3a86ff;
+            background: rgba(58, 134, 255, 0.15);
+            padding: 4px 10px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Рабочая зона чата */
+        .messages-space {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-color: #0b132b;
+        }
+
+        /* Сообщения в стиле монолитных блоков */
+        .msg {
+            max-width: 85%;
+            padding: 14px 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            border-radius: 6px;
+        }
+
+        /* Мои исходящие — Полностью белая контрастная карточка с черным текстом */
+        .msg.outgoing {
+            align-self: flex-end;
+            background-color: #ffffff;
+            color: #0f172a;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Входящие — Темно-синяя карточка с белыми границами */
+        .msg.incoming {
+            align-self: flex-start;
+            background-color: #1c2541;
+            color: #ffffff;
+            border: 1px solid #3a86ff;
+        }
+
+        .msg-meta {
+            font-size: 10px;
+            margin-top: 8px;
+            display: block;
+            text-align: right;
+            opacity: 0.6;
+        }
+
+        .msg.outgoing .msg-meta { color: #64748b; }
+        .msg.incoming .msg-meta { color: #3a86ff; }
+
+        /* Нижняя панель */
+        .input-panel {
+            padding: 16px;
+            background-color: #1c2541;
+            border-top: 1px solid #1e293b;
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Поле ввода */
+        .message-field {
+            flex: 1;
+            background-color: #0b132b;
+            border: 1px solid #3a86ff;
+            border-radius: 6px;
+            padding: 14px;
+            color: #ffffff;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .message-field:focus {
+            border-color: #ffffff;
+        }
+
+        /* Кнопка отправки */
+        .send-btn {
+            background-color: #3a86ff;
+            border: none;
+            border-radius: 6px;
+            color: #ffffff;
+            padding: 0 24px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: background 0.2s;
+        }
+
+        .send-btn:hover {
+            background-color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="messenger-container">
+        <!-- Шапка -->
+        <div class="chat-header">
+            <div class="logo-text">FACTOR X</div>
+            <div class="system-badge">v1.0 // ACTIVE</div>
+        </div>
+
+        <!-- Поле с сообщениями -->
+        <div class="messages-space" id="chatBox">
+            
+            <div class="msg incoming">
+                Привет! Мы перенастроили ядро Factor X на темно-бело-синюю гамму.
+                <span class="msg-meta">12:00</span>
+            </div>
+            
+            <div class="msg outgoing">
+                Вот это выглядит стильно. Белые
