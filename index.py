@@ -74,11 +74,14 @@ def home():
             {messages_html}
         </div>
         
-        <div class="input-area">
-            <input type="text" id="messageInput" placeholder="Введите сообщение...">
+                <div class="input-area" style="display: flex; gap: 8px; align-items: center;">
+            <label for="fileInput" style="padding: 12px; background: #1e293b; border-radius: 6px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center;">+</label>
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            <input type="text" id="messageInput" placeholder="Введите сообщение..." style="flex: 1;">
             <button onclick="sendMessage()">СЕНД</button>
         </div>
-    </div>
+
+    
 
     <script>
         const chatBox = document.getElementById('chatBox');
@@ -86,28 +89,44 @@ def home():
         const urlParams = new URLSearchParams(window.location.search);
         const currentRoom = urlParams.get('room') || 'main';
 
-        async function sendMessage() {{
+                async function sendMessage() {
             const text = messageInput.value.trim();
-            if (!text) return;
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!text && !file) return;
 
-            try {{
-                let response = await fetch('/api/send_message', {{
+            let fileData = null;
+            let fileName = null;
+
+            if (file) {
+                fileName = file.name;
+                fileData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            try {
+                let response = await fetch('/api/send_message', {
                     method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{
+                    headers: { 'Content-Type':  body: JSON.stringify({
                         room: currentRoom,
                         sender: 'TornadoSOS',
-                        text: text
-                    }})
-                }});
-                if (response.ok) {{
+                        text: text,
+                        file_data: fileData,
+                        file_name: fileName
+                    })
+                });
+                if (response.ok) {
                     messageInput.value = '';
+                    fileInput.value = ''; // Очищаем выбранный файл
                     window.location.reload();
                 }}
-            }} catch (err) {{
-                console.error(err);
-            }}
-        }}
+            } catch (err) { console.error(err); }
+        }
+
     </script>
 </body>
 </html>"""
