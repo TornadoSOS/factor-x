@@ -46,11 +46,20 @@ def home():
             .hidden {{ display: none; }}
             .logout-btn {{ background: #ff5252; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 10px; font-weight: bold; width: auto; display: inline-block; }}
             .logout-btn:hover {{ background: #e04444; }}
+            .admin-card {{ border: 2px dashed #ff5252; background: #2a1a1a; }}
+            .admin-btn {{ background: #ff5252; width: auto; padding: 8px 15px; font-size: 12px; }}
         </style>
     </head>
     <body>
         <div class="container">
             
+            <!-- СЕКРЕТНАЯ ПАНЕЛЬ АДМИНИСТРАТОРА -->
+            <div id="adminPanel" class="card admin-card hidden">
+                <h3 style="color: #ff5252; margin-top: 0;">👑 Панель Создателя</h3>
+                <p style="font-size: 13px; color: #aaa;">Вам доступно управление сервером Factor X.</p>
+                <button onclick="clearAllServerData()" class="admin-btn">💥 Очистить все чаты</button>
+            </div>
+
             <!-- ОКНО ВХОДА -->
             <div id="authScreen" class="card">
                 <h2>Factor X 🔑</h2>
@@ -100,16 +109,31 @@ def home():
                 document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('mainScreen').classList.remove('hidden');
                 document.getElementById('userBadge').innerText = username;
+                
+                // Проверка ника суперадмина
+                if (username === 'TornadoSOS') {{
+                    document.getElementById('adminPanel').classList.remove('hidden');
+                }} else {{
+                    document.getElementById('adminPanel').classList.add('hidden');
+                }}
             }}
 
-            // Проверка пароля перед выходом
+            async function clearAllServerData() {{
+                if (!confirm("Вы уверены, что хотите сбросить ВСЕ сообщения на сервере?")) return;
+                
+                const response = await fetch('/admin/clear', {{ method: 'POST' }});
+                const result = await response.json();
+                if (result.status === 'success') {{
+                    alert("Все чаты успешно очищены!");
+                    location.reload();
+                }}
+            }}
+
             async function logoutWithPassword() {{
                 const currentUser = localStorage.getItem('fx_user');
                 const passwordCheck = prompt("Безопасный выход! Введите ваш текущий пароль для подтверждения:");
-                
-                if (passwordCheck === null) return; // Нажал отмену
+                if (passwordCheck === null) return;
 
-                // Отправляем пароль на сервер для сверки
                 const response = await fetch('/auth', {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
@@ -212,5 +236,12 @@ def send_message():
             rooms_db[room_id] = []
         rooms_db[room_id].append(f"{user}: {message_text}")
         return jsonify({"status": "success"})
-        
     return jsonify({"status": "error"})
+
+@app.route('/admin/clear', methods=['POST'])
+def admin_clear():
+    global rooms_db
+    rooms_db = {
+        "main": ["Система: Все чаты были полностью очищены Суперадмином!"]
+    }
+    return jsonify({"status": "success"})
