@@ -171,3 +171,202 @@ def home():
             </div>
 
         </div>
+        <script>
+            const savedUser = localStorage.getItem('fx_user');
+            if (savedUser) {{
+                showChatsScreen(savedUser);
+            }}
+
+            function showChatsScreen(username) {{
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('chatsScreen').classList.remove('hidden');
+                document.getElementById('chatWindowScreen').classList.add('hidden');
+                document.getElementById('userBadgeHeader').innerText = "@" + username;
+            }}
+
+            // Функция открытия конкретного чата
+            function openChat(type) {{
+                document.getElementById('chatsScreen').classList.add('hidden');
+                document.getElementById('chatWindowScreen').classList.remove('hidden');
+                
+                const chatName = document.getElementById('currentChatName');
+                const roomBadge = document.getElementById('currentRoomBadge');
+                const inputBlock = document.getElementById('inputPanelBlock');
+                const mngOptions = document.getElementById('managementOptions');
+                const adminPanel = document.getElementById('adminPanel');
+                const currentUser = localStorage.getItem('fx_user');
+
+                // Прячем всё по умолчанию
+                inputBlock.classList.remove('hidden');
+                mngOptions.classList.add('hidden');
+                adminPanel.classList.add('hidden');
+
+                if (type === 'management') {{
+                    chatName.innerText = "Factor X Управление";
+                    roomBadge.innerText = "system-control";
+                    inputBlock.classList.add('hidden'); // Боту управления нельзя писать руками
+                    mngOptions.classList.remove('hidden'); // Показываем кнопку Выхода
+                    
+                    // Если зашел сам Создатель, открываем ему админку прямо тут
+                    if (currentUser === 'TornadoSOS') {{
+                        adminPanel.classList.remove('hidden');
+                    }}
+                }} else if (type === 'favorites') {{
+                    chatName.innerText = "Избранное";
+                    roomBadge.innerText = "favorites";
+                    // Перенаправляем на комнату избранного, если мы еще не в ней
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('room') !== 'favorites') {{
+                        window.location.href = '/?room=favorites';
+                    }}
+                }} else {{
+                    chatName.innerText = "Hooligan's Chat";
+                    roomBadge.innerText = "main";
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('room') !== 'main' && urlParams.get('room') !== null) {{
+                        window.location.href = '/?room=main';
+                    }}
+                }}
+
+                // Скроллим чат вниз
+                const container = document.getElementById('notesContainer');
+                container.scrollTop = container.scrollHeight;
+            }}
+
+            // Проверяем при загрузке, в какой комнате мы находимся, чтобы открыть нужный экран
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentRoom = urlParams.get('room') || 'main';
+            if (savedUser && (currentRoom === 'favorites' || window.location.search.includes('room'))) {{
+                showChatsScreen(savedUser);
+                if (currentRoom === 'favorites') openChat('favorites');
+                else openChat('main');
+            }}
+
+            function backToChats() {{
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('room') === 'favorites') {{
+                    window.location.href = '/'; // Сбрасываем комнату при выходе в общий список
+                }} else {{
+                    showChatsScreen(localStorage.getItem('fx_user'));
+                }}
+            }}
+
+            async function clearAllServerData() {{
+                if (!confirm("Вы уверены, что хотите сбросить ВСЕ сообщения на сервере?")) return;
+                const response = await fetch('/admin/clear', {{ method: 'POST' }});
+                const result = await response.json();
+                if (result.status === 'success') {{
+                    window.location.href = '/';
+                }}
+            }}
+
+            async function logoutWithPassword() {{
+                const currentUser = localStorage.getItem('fx_user');
+                const passwordCheck = prompt("Введите ваш текущий пароль для подтверждения выхода:");
+                if (passwordCheck === null) return;
+
+                const response = await fetch('/auth', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ username: currentUser, password: passwordCheck }})
+                }});
+
+                const result = await response.json();
+                if (result.status === 'success') {{
+                    localStorage.removeItem('fx_user');
+                    window.location.href = '/';
+                }} else {{
+                    alert("Неверный пароль!");
+                }}
+            }}
+
+            async function loginOrRegister() {{
+                const user = document.getElementById('usernameInput').value.trim();
+                const pass = document.getElementById('passwordInput').value.trim();
+                const errorBlock = document.getElementById('authError');
+
+                if (!user || !pass) {{
+                    errorBlock.innerText = "Заполните все поля!";
+                    return;
+                }}
+
+                const response = await fetch('/auth', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ username: user, password: pass }})
+                }});
+
+                const result = await response.json();
+                if (result.status === 'success') {{
+                    localStorage.setItem('fx_user', user);
+                    showChatsScreen(user);
+                }} else {{
+                    errorBlock.innerText = result.message;
+                }}
+            }}
+
+            async function sendToServer() {{
+                const input = document.getElementById('msgInput');
+                const text = input.value.trim();
+                if (!text) return;
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentRoom = urlParams.get('room') || 'main';
+                const currentUser = localStorage.getItem('fx_user') || 'Аноним';
+
+                const response = await fetch('/send_message', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ message: text, room: currentRoom, user: currentUser }})
+                }});
+
+                const result = await response.json();
+                if (result.status === 'success') {{
+                    location.reload();
+                }}
+            }}
+        </script>
+    </body>
+    </html>
+    """
+
+@app.route('/auth', methods=['POST'])
+def auth():
+    data = request.json or {}
+    user = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    
+    if not user or not password:
+        return jsonify({"status": "error", "message": "Пустые данные"})
+    if user in users_db:
+        if users_db[user] == password:
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"status": "error", "message": "Неверный пароль!"})
+    else:
+        users_db[user] = password
+        return jsonify({"status": "success"})
+
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    data = request.json or {}
+    message_text = data.get('message')
+    room_id = clean_room_name(data.get('room', 'main'))
+    user = data.get('user', 'Аноним')
+    
+    if message_text:
+        if room_id not in rooms_db:
+            rooms_db[room_id] = []
+        rooms_db[room_id].append(f"{user}: {message_text}")
+        return jsonify({"status": "success"})
+    return jsonify({"status": "error"})
+
+@app.route('/admin/clear', methods=['POST'])
+def admin_clear():
+    global rooms_db
+    rooms_db = {
+        "main": ["Система: Все чаты были полностью очищены Суперадмином!"],
+        "roblox": ["Система: Чат очищен"],
+        "games": ["Система: Чат очищен"]
+    }
+    return jsonify({"status": "success"})
