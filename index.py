@@ -1,16 +1,12 @@
 import os
-import sys
-from flask import Flask, request, jsonify, render_template
-
-# Этот кусок кода заставляет Vercel железно видеть файлы database.py и messages.py
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.append(current_dir)
-
-import database
-import messages
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
+
+# Наша база данных комнат прямо в коде
+rooms_db = {
+    "main": ["Система: Добро пожаловать в общий чат!"]
+}
 
 def clean_room_name(name):
     if not name:
@@ -20,23 +16,101 @@ def clean_room_name(name):
 @app.route('/api/send_message', methods=['POST'])
 def send_message():
     data = request.json or {}
-    r_id = clean_room_name(data.get('room', 'main'))
-    snd = data.get('sender', 'Аноним')
-    txt = data.get('text', '')
-    res, status = messages.add_new_message(r_id, snd, txt)
-    return jsonify(res), status
+    room_id = clean_room_name(data.get('room', 'main'))
+    sender = data.get('sender', 'Аноним')
+    text = data.get('text', '')
+    
+    if room_id not in rooms_db:
+        rooms_db[room_id] = []
+        
+    rooms_db[room_id].append(f"{sender}: {text}")
+    return jsonify({"status": "success", "messages": rooms_db[room_id]}), 200
 
 @app.route('/')
 def home():
-    r_name = request.args.get('room', 'main')
-    room_id = clean_room_name(r_name)
+    room_name = request.args.get('room', 'main')
+    room_id = clean_room_name(room_name)
     
-    if room_id not in database.rooms_db:
-        sys_msg = f"Система: Создана комната #{room_id}"
-        database.rooms_db[room_id] = [{"sender": "Система", "text": sys_msg}]
+    if room_id not in rooms_db:
+        rooms_db[room_id] = [f"Система: Создана комната #{room_id}"]
         
-    messages_html = messages.generate_messages_html(room_id)
-    return render_template('index.html', messages_html=messages_html, room_id=room_id)
+    messages_html = ""
+    for msg in rooms_db[room_id]:
+        if "Система:" in msg:
+            messages_html += f'<div class="msg-wrapper center"><div class="msg-item system">{msg}</div></div>'
+        else:
+            messages_html += f'<div class="msg-wrapper"><div class="msg-item user">{msg}</div></div>'
+
+    # ТВОЙ РАБОЧИЙ HTML-КОД И ДИЗАЙН ИЗ ACODE
+    return f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factor X // Core</title>
+    <style>
+        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+        body {{ background-color: #020617; color: #f8fafc; padding: 20px; }}
+        .chat-container {{ max-width: 600px; margin: 0 auto; background: #0b1329; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }}
+        .logo-text {{ font-size: 24px; font-weight: bold; color: #38bdf8; text-align: center; margin-bottom: 5px; }}
+        .system-badge {{ text-align: center; font-size: 12px; color: #10b981; margin-bottom: 20px; }}
+        .messages-space {{ height: 350px; overflow-y: auto; background: #0f172a; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #1e293b; }}
+        .msg-wrapper {{ margin-bottom: 10px; display: flex; }}
+        .msg-wrapper.center {{ justify-content: center; }}
+        .msg-item {{ padding: 8px 14px; border-radius: 8px; max-width: 80%; font-size: 15px; }}
+        .msg-item.system {{ background: #1e293b; color: #94a3b8; font-size: 13px; text-align: center; }}
+        .msg-item.user {{ background: #1e40af; color: #ffffff; }}
+        .input-area {{ display: flex; gap: 10px; }}
+        input {{ flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #1e293b; background: #0f172a; color: white; font-size: 15px; }}
+        button {{ padding: 12px 20px; border-radius: 6px; border: none; background: #38bdf8; color: #020617; font-weight: bold; cursor: pointer; }}
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="logo-text">FACTOR X</div>
+        <div class="system-badge">v1.0 // ACTIVE</div>
+        
+        <div class="messages-space" id="chatBox">
+            {messages_html}
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Введите сообщение...">
+            <button onclick="sendMessage()">СЕНД</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const messageInput = document.getElementById('messageInput');
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentRoom = urlParams.get('room') || 'main';
+
+        async function sendMessage() {{
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            try {{
+                let response = await fetch('/api/send_message', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{
+                        room: currentRoom,
+                        sender: 'TornadoSOS',
+                        text: text
+                    }})
+                }});
+                if (response.ok) {{
+                    messageInput.value = '';
+                    window.location.reload();
+                }}
+            }} catch (err) {{
+                console.error(err);
+            }}
+        }}
+    </script>
+</body>
+</html>"""
 
 if __name__ == '__main__':
     app.run(debug=True)
