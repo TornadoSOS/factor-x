@@ -1,187 +1,261 @@
-import os
-from flask import Flask, request, jsonify
+import sqlite3
+
+DB_PATH = "/tmp/factorx_flask.db"
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Таблица пользователей
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            nickname TEXT NOT NULL,
+            password TEXT NOT NULL,
+            avatar TEXT DEFAULT '',
+            theme TEXT DEFAULT 'dark'
+        )
+    ''')
+    # Таблица заметок
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            text TEXT NOT NULL,
+            FOREIGN KEY(username) REFERENCES users(username)
+        )
+    ''')
+    # Таблица личных сообщений
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender TEXT NOT NULL,
+            receiver TEXT NOT NULL,
+            text TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(sender) REFERENCES users(username),
+            FOREIGN KEY(receiver) REFERENCES users(username)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+from flask import Blueprint, request, jsonify
+from .db import get_db_connection
+import sqlite3
+
+auth_bp = Blueprint('auth', __name__)
+
+@auth_bp.route('/api/register', methods=['POST'])
+def register():
+    data = request.json or {}
+    nickname = data.get('nickname', '').strip()
+    username = data.get('username', '').lower().strip()
+    password = data.get('password', '')
+
+    if not nickname or not username or not password:
+        return jsonify({"detail": "Все поля обязательны для заполнения"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO users (username, nickname, password) VALUES (?, ?, ?)",
+            (username, nickname, password)
+        )
+        conn.commit()
+        return jsonify({"status": "success", "message": "Регистрация успешна"})
+    except sqlite3.IntegrityError:
+        return jsonify({"detail": "Этот @username уже занят"}), 400
+    finally:
+        conn.close()
+
+@auth_bp.route('/api/login', methods=['POST'])
+def login():
+    data = request.json or {}
+    username = data.get('username', '').lower().strip()
+    password = data.get('password', '')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT username, nickname, avatar, theme FROM users WHERE username = ? AND password = ?",
+        (username, password)
+    )
+    user = cursor.fetchone()
+    conn.close()
+
+    if not user:
+        return jsonify({"detail": "Неверный юзернейм или пароль"}), 401
+
+    return jsonify({
+        "status": "success",
+        "user": dict(user)
+    })
+from flask import Blueprint, request, jsonify
+from .db import get_db_connection
+
+user_bp = Blueprint('user', __name__)
+
+@user_bp.route('/api/search', methods=['GET'])
+def search():
+    username = request.args.get('username', '').lower().strip()
+    if not username:
+        return jsonify({"detail": "Укажите username для поиска"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT nickname, username, avatar FROM users WHERE username = ?", (username,))
+    user = cursor.fetchone()
+    conn.close()
+
+    if not user:
+        return jsonify({"detail": "Пользователь не найден"}), 404
+    return jsonify(dict(user))
+
+@user_bp.route('/api/profile/update', methods=['POST'])
+def update_profile():
+    data = request.json or {}
+    current_user = data.get('current_username', '').lower().strip()
+    new_nick = data.get('new_nickname', '').strip()
+    new_user = data.get('new_username', '').lower().strip()
+    new_avatar = data.get('new_avatar', '').strip()
+    new_theme = data.get('new_theme', 'dark').strip()
+
+    if not new_nick or not new_user:
+        return jsonify({"detail": "Имя и юзернейм не могут быть пустыми"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if current_user != new_user:
+        cursor.execute("SELECT username FROM users WHERE username = ?", (new_user,))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({"detail": "Новый юзернейм уже занят"}), 400
+
+    cursor.execute("""
+        UPDATE users 
+        SET nickname = ?, username = ?, avatar = ?, theme = ? 
+        WHERE username = ?
+    """, (new_nick, new_user, new_avatar, new_theme, current_user))
+    
+    cursor.execute("UPDATE notes SET username = ? WHERE username = ?", (new_user, current_user))
+    cursor.execute("UPDATE messages SET sender = ? WHERE sender = ?", (new_user, current_user))
+    cursor.execute("UPDATE messages SET receiver = ? WHERE receiver = ?", (new_user, current_user))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success"})
+from flask import Blueprint, request, jsonify
+from .db import get_db_connection
+
+chats_bp = Blueprint('chats', __name__)
+
+@chats_bp.route('/api/notes', methods=['GET', 'POST'])
+def handle_notes():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if request.method == 'GET':
+        username = request.args.get('username', '').lower().strip()
+        cursor.execute("SELECT text FROM notes WHERE username = ?", (username,))
+        rows = cursor.fetchall()
+        conn.close()
+        return jsonify({"notes": [row["text"] for row in rows]})
+
+    elif request.method == 'POST':
+        data = request.json or {}
+        username = data.get('username', '').lower().strip()
+        text = data.get('text', '').strip()
+        if not text:
+            return jsonify({"status": "ignored"})
+        
+        cursor.execute("INSERT INTO notes (username, text) VALUES (?, ?)", (username, text))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success"})
+
+@chats_bp.route('/api/dialogs', methods=['GET'])
+def get_dialogs():
+    username = request.args.get('username', '').lower().strip()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT DISTINCT CASE WHEN sender = ? THEN receiver ELSE sender END AS peer
+        FROM messages WHERE sender = ? OR receiver = ?
+    """, (username, username, username))
+    
+    dialogs = [row["peer"] for row in cursor.fetchall()]
+    result = []
+    for person in dialogs:
+        cursor.execute("SELECT nickname, username, avatar FROM users WHERE username = ?", (person,))
+        u_info = cursor.fetchone()
+        if u_info:
+            result.append(dict(u_info))
+            
+    conn.close()
+    return jsonify({"dialogs": result})
+
+@chats_bp.route('/api/chat/history', methods=['GET'])
+def get_history():
+    u1 = request.args.get('user1', '').lower().strip()
+    u2 = request.args.get('user2', '').lower().strip()
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT sender, receiver, text, timestamp FROM messages 
+        WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)
+        ORDER BY timestamp ASC
+    """, (u1, u2, u2, u1))
+    
+    history = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify({"history": history})
+
+@chats_bp.route('/api/chat/send', methods=['POST'])
+def send_msg():
+    data = request.json or {}
+    sender = data.get('sender', '').lower().strip()
+    receiver = data.get('receiver', '').lower().strip()
+    text = data.get('text', '').strip()
+
+    if not text:
+        return jsonify({"detail": "Сообщение пустое"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO messages (sender, receiver, text) VALUES (?, ?, ?)", (sender, receiver, text))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success"})
+from flask import Flask, jsonify
+from flask_cors import CORS
+from .db import init_db
+from .auth import auth_bp
+from .user import user_bp
+from .chats import chats_bp
 
 app = Flask(__name__)
+CORS(app)  # Разрешаем кросс-доменные запросы
 
-# Наша база данных комнат прямо в коде
-rooms_db = {
-    "main": ["Система: Добро пожаловать в общий чат!"]
-}
+# Инициализируем SQLite таблицы
+init_db()
 
-def clean_room_name(name):
-    if not name:
-        return "main"
-    return str(name).strip().lower()
-users_db = {}
+# Регистрируем все наши блупринты (модули)
+app.register_blueprint(auth_bp)
+app.register_blueprint(user_bp)
+app.register_blueprint(chats_router if 'chats_router' in locals() else chats_bp)
 
-@app.route('/api/auth', methods=['POST'])
-def api_auth():
-    data = request.json or {}
-    user = str(data.get('username', '')).strip().lower()
-    passw = str(data.get('password', '')).strip()
-    if not user or not passw:
-        return jsonify({"status": "error", "message": "Заполните все поля!"}), 400
-    if user in users_db:
-        if users_db[user] == passw:
-            return jsonify({"status": "success", "username": user}), 200
-        return jsonify({"status": "error", "message": "Неверный пароль!"}), 401
-    users_db[user] = passw
-    return jsonify({"status": "success", "username": user}), 201
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({"status": "Factor X Flask Backend is Active!"})
 
-
-@app.route('/api/send_message', methods=['POST'])
-def send_message():
-    data = request.json or {}
-    room_id = clean_room_name(data.get('room', 'main'))
-    sender = data.get('sender', 'Аноним')
-    text = data.get('text', '')
-    
-    if room_id not in rooms_db:
-        rooms_db[room_id] = []
-        
-    rooms_db[room_id].append(f"{sender}: {text}")
-    return jsonify({"status": "success", "messages": rooms_db[room_id]}), 200
-
-@app.route('/')
-def home():
-    room_name = request.args.get('room', 'main')
-    room_id = clean_room_name(room_name)
-    
-    if room_id not in rooms_db:
-        rooms_db[room_id] = [f"Система: Создана комната #{room_id}"]
-        
-    messages_html = ""
-    for msg in rooms_db[room_id]:
-        if "Система:" in msg:
-            messages_html += f'<div class="msg-wrapper center"><div class="msg-item system">{msg}</div></div>'
-        else:
-            messages_html += f'<div class="msg-wrapper"><div class="msg-item user">{msg}</div></div>'
-
-    # ТВОЙ РАБОЧИЙ HTML-КОД И ДИЗАЙН ИЗ ACODE
-    return f"""<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Factor X // Core</title>
-    <style>
-        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
-        body {{ background-color: #020617; color: #f8fafc; padding: 20px; }}
-        .chat-container {{ max-width: 600px; margin: 0 auto; background: #0b1329; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }}
-        .logo-text {{ font-size: 24px; font-weight: bold; color: #38bdf8; text-align: center; margin-bottom: 5px; }}
-        .system-badge {{ text-align: center; font-size: 12px; color: #10b981; margin-bottom: 20px; }}
-        .messages-space {{ height: 350px; overflow-y: auto; background: #0f172a; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #1e293b; }}
-        .msg-wrapper {{ margin-bottom: 10px; display: flex; }}
-        .msg-wrapper.center {{ justify-content: center; }}
-        .msg-item {{ padding: 8px 14px; border-radius: 8px; max-width: 80%; font-size: 15px; }}
-        .msg-item.system {{ background: #1e293b; color: #94a3b8; font-size: 13px; text-align: center; }}
-        .msg-item.user {{ background: #1e40af; color: #ffffff; }}
-        
-        input {{ flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #1e293b; background: #0f172a; color: white; font-size: 15px; }}
-        button {{ padding: 12px 20px; border-radius: 6px; border: none; background: #38bdf8; color: #020617; font-weight: bold; cursor: pointer; }}
-    </style>
-</head>
-<body>
-    <div class="chat-container">
-        <div class="logo-text">FACTOR X</div>
-        <div class="system-badge">v1.0 // ACTIVE</div>
-        
-        <div class="messages-space" id="chatBox">
-            {messages_html}
-        </div>
-        
-                <div class="input-area" style="display: flex; gap: 8px; align-items: center;">
-            <label for="fileInput" style="padding: 12px; background: #1e293b; border-radius: 6px; cursor: pointer; color: #38bdf8; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center;">+</label>
-            <input type="file" id="fileInput" accept="image/*" style="display: none;">
-            <input type="text" id="messageInput" placeholder="Введите сообщение..." style="flex: 1;">
-            <button onclick="sendMessage()">СЕНД</button>
-        </div>
-
-    
-
-    <script>
-        const chatBox = document.getElementById('chatBox');
-        const messageInput = document.getElementById('messageInput');
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentRoom = urlParams.get('room') || 'main';
-
-                async function sendMessage() {
-            const text = messageInput.value.trim();
-            const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
-            
-            if (!text && !file) return;
-
-            let fileData = null;
-            let fileName = null;
-
-            if (file) {
-                fileName = file.name;
-                fileData = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            try {
-                let response = await fetch('/api/send_message', {
-                    method: 'POST',
-                    headers: { 'Content-Type':  body: JSON.stringify({
-                        room: currentRoom,
-                        sender: 'TornadoSOS',
-                        text: text,
-                        file_data: fileData,
-                        file_name: fileName
-                    })
-                });
-                if (response.ok) {
-                    messageInput.value = '';
-                    fileInput.value = ''; // Очищаем выбранный файл
-                    window.location.reload();
-                }}
-            } catch (err) { console.error(err); }
-        }
-        document.addEventListener("DOMContentLoaded", () => {
-            const savedUser = localStorage.getItem("f_user");
-            if (savedUser) {
-                document.getElementById("authOverlay").style.display = "none";
-                document.getElementById("userBadge").innerText = "@" + savedUser;
-            }
-            if (localStorage.getItem("f_theme") === "light") {
-                document.body.classList.add("light-theme");
-            }
-        });
-
-        function toggleTheme() {
-            document.body.classList.toggle("light-theme");
-            localStorage.setItem("f_theme", document.body.classList.contains("light-theme") ? "light" : "dark");
-        }
-
-        async function loginUser() {
-            const user = document.getElementById("usernameInput").value.trim();
-            const pass = document.getElementById("passwordInput").value.trim();
-            if (!user || !pass) return alert("Заполните поля!");
-            let res = await fetch('/api/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: user, password: pass })
-            });
-            let data = await res.json();
-            if (res.ok) {
-                localStorage.setItem("f_user", data.username);
-                window.location.reload();
-            } else { alert(data.message); }
-        }
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-        }
-
-    </script>
-</body>
-</html>"""
-
+# Этот блок нужен для локального тестирования на ПК или телефоне, если запускаешь вручную
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
