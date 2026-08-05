@@ -1,20 +1,28 @@
 import os
 from flask import Flask, request, jsonify
-from tools import get_server_time
+from tools import get_server_time, clean_room_name
 
 app = Flask(__name__)
 
-# Наша серверная база данных (пока сервер работает, она всё помнит)
-favorites_db = ["Первое системное сообщение Factor X"]
+# Временная база данных для пользователей и сообщений
+# (Пока сервер не перезагрузится, он всё помнит!)
+users_db = {}  # Структура: {"имя": "пароль"}
+rooms_db = {
+    "main": ["Система: Добро пожаловать в главный чат Factor X!"]
+}
 
 @app.route('/')
 def home():
     current_time = get_server_time()
+    room_name = request.args.get('room', 'main')
+    room_id = clean_room_name(room_name)
     
-    # Сюда мы передадим все заметки из базы данных Python
-    notes_html = ""
-    for note in favorites_db:
-        notes_html += f'<div class="note-item">{note}</div>'
+    if room_id not in rooms_db:
+        rooms_db[room_id] = [f"Система: Создана комната #{room_id}"]
+        
+    messages_html = ""
+    for msg in rooms_db[room_id]:
+        messages_html += f'<div class="note-item">{msg}</div>'
 
     return f"""
     <!DOCTYPE html>
@@ -28,56 +36,116 @@ def home():
             .container {{ max-width: 400px; margin: 0 auto; }}
             .card {{ border: 1px solid #333; padding: 20px; background: #1e1e1e; border-radius: 10px; margin-bottom: 20px; }}
             h2 {{ margin-top: 0; color: #4CAF50; }}
-            input {{ width: 80%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 5px; color: white; margin-bottom: 10px; }}
-            button {{ padding: 10px 20px; background: #4CAF50; border: none; border-radius: 5px; color: white; cursor: pointer; font-weight: bold; }}
-            .tg-button {{ display: inline-block; padding: 12px 24px; background: #24A1DE; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px; }}
-            .notes-list {{ text-align: left; background: #252525; padding: 10px; border-radius: 5px; max-height: 150px; overflow-y: auto; }}
+            input {{ width: 85%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 5px; color: white; margin-bottom: 10px; font-size: 14px; }}
+            button {{ padding: 10px 20px; background: #4CAF50; border: none; border-radius: 5px; color: white; cursor: pointer; font-weight: bold; width: 90%; }}
+            .notes-list {{ text-align: left; background: #252525; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; margin-bottom: 10px; }}
             .note-item {{ border-bottom: 1px solid #333; padding: 5px 0; font-size: 14px; color: #fff; }}
+            .room-badge {{ display: inline-block; background: #ff9800; color: black; padding: 3px 8px; border-radius: 3px; font-weight: bold; font-size: 12px; }}
+            .hidden {{ display: none; }}
         </style>
     </head>
     <body>
         <div class="container">
-            <div class="card">
-                <h2>Factor X</h2>
-                <p>Добро пожаловать в мессенджер!</p>
-                <p style="color: #4CAF50; font-size: 14px;">Время запуска сервера: {current_time}</p>
+            
+            <!-- ОКНО ВХОДА / РЕГИСТРАЦИИ -->
+            <div id="authScreen" class="card">
+                <h2>Factor X 🔑</h2>
+                <p>Введите имя и пароль для входа или создания аккаунта</p>
+                <input type="text" id="usernameInput" placeholder="Ваш никнейм...">
+                <input type="password" id="passwordInput" placeholder="Ваш пароль...">
+                <button onclick="loginOrRegister()" style="background: #24A1DE;">Войти / Создать аккаунт</button>
+                <p id="authError" style="color: #ff5252; font-size: 12px; margin-top: 10px;"></p>
             </div>
 
-            <div class="card">
-                <h3>📁 Избранное (База Python)</h3>
-                <input type="text" id="noteInput" placeholder="Напишите заметку...">
-                <button onclick="sendToServer()">Отправить в базу</button>
-                <div style="margin-top: 15px;">
+            <!-- ИНТЕРФЕЙС МЕССЕНДЖЕРА (СКРЫТ ДО ВХОДА) -->
+            <div id="mainScreen" class="hidden">
+                <div class="card">
+                    <h2>Factor X</h2>
+                    <p>Привет, <span id="userBadge" style="color: #4CAF50; font-weight: bold;"></span>!</p>
+                    <p>Комната: <span class="room-badge">#{room_id}</span></p>
+                    <p style="color: #888; font-size: 11px;">Время сервера: {current_time}</p>
+                </div>
+
+                <div class="card">
+                    <h3>🔑 Сменить чат</h3>
+                    <input type="text" id="roomInput" placeholder="Имя секретного чата...">
+                    <button onclick="changeRoom()" style="background: #ff9800; color: black; width: auto;">Перейти</button>
+                </div>
+
+                <div class="card">
+                    <h3>💬 Чат комнаты</h3>
                     <div class="notes-list" id="notesContainer">
-                        {notes_html}
+                        {messages_html}
                     </div>
+                    <input type="text" id="msgInput" placeholder="Введите сообщение...">
+                    <button onclick="sendToServer()">Отправить</button>
                 </div>
             </div>
 
-            <div class="card">
-                <h3>🤖 Помощь по проекту</h3>
-                <p style="font-size: 14px; color: #aaa;">Нужна помощь? Переходи к нашему официальному инструктору в Telegram.</p>
-                <a href="https://t.me" target="_blank" class="tg-button">Factor X Инструктор</a>
-            </div>
         </div>
 
         <script>
-            // Функция отправляет текст на твой Python-сервер
-            async function sendToServer() {{
-                const input = document.getElementById('noteInput');
-                const text = input.value.trim();
-                if (!text) return;
+            // Проверяем, входил ли пользователь ранее (чтобы не вводить каждый раз при обновлении)
+            const savedUser = localStorage.getItem('fx_user');
+            if (savedUser) {{
+                showMainScreen(savedUser);
+            }}
 
-                // Отправляем POST-запрос в Python
-                const response = await fetch('/send_message', {{
+            function showMainScreen(username) {{
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('mainScreen').classList.remove('hidden');
+                document.getElementById('userBadge').innerText = username;
+            }}
+
+            async function loginOrRegister() {{
+                const user = document.getElementById('usernameInput').value.trim();
+                const pass = document.getElementById('passwordInput').value.trim();
+                const errorBlock = document.getElementById('authError');
+
+                if (!user || !pass) {{
+                    errorBlock.innerText = "Заполните все поля!";
+                    return;
+                }}
+
+                const response = await fetch('/auth', {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ message: text, user_id: 'Пользователь' }})
+                    body: JSON.stringify({{ username: user, password: pass }})
                 }});
 
                 const result = await response.json();
                 if (result.status === 'success') {{
-                    // Просто обновляем страницу, чтобы сервер прислал новый список из базы
+                    localStorage.setItem('fx_user', user); // Запоминаем в браузере телефона
+                    showMainScreen(user);
+                }} else {{
+                    errorBlock.innerText = result.message;
+                }}
+            }}
+
+            function changeRoom() {{
+                const room = document.getElementById('roomInput').value.trim();
+                if (room) {{
+                    window.location.href = '/?room=' + encodeURIComponent(room);
+                }}
+            }}
+
+            async function sendToServer() {{
+                const input = document.getElementById('msgInput');
+                const text = input.value.trim();
+                if (!text) return;
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentRoom = urlParams.get('room') || 'main';
+                const currentUser = localStorage.getItem('fx_user') || 'Аноним';
+
+                const response = await fetch('/send_message', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ message: text, room: currentRoom, user: currentUser }})
+                }});
+
+                const result = await response.json();
+                if (result.status === 'success') {{
                     location.reload();
                 }}
             }}
@@ -86,14 +154,37 @@ def home():
     </html>
     """
 
+@app.route('/auth', methods=['POST'])
+def auth():
+    data = request.json or {}
+    user = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    
+    if not user or not password:
+        return jsonify({"status": "error", "message": "Пустые данные"})
+        
+    # Логика регистрации и входа
+    if user in users_db:
+        if users_db[user] == password:
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"status": "error", "message": "Неверный пароль для этого имени!"})
+    else:
+        # Если пользователя нет, регистрируем его с этим паролем
+        users_db[user] = password
+        return jsonify({"status": "success"})
+
 @app.route('/send_message', methods=['POST'])
 def send_message():
     data = request.json or {}
     message_text = data.get('message')
+    room_id = clean_room_name(data.get('room', 'main'))
+    user = data.get('user', 'Аноним')
     
     if message_text:
-        # Добавляем в нашу базу данных на Python!
-        favorites_db.append(message_text)
+        if room_id not in rooms_db:
+            rooms_db[room_id] = []
+        rooms_db[room_id].append(f"{user}: {message_text}")
         return jsonify({"status": "success"})
         
     return jsonify({"status": "error"})
