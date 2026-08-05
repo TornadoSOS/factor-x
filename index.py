@@ -24,7 +24,11 @@ def home():
         
     messages_html = ""
     for msg in rooms_db[room_id]:
-        messages_html += f'<div class="note-item">{msg}</div>'
+        # Проверяем, кто отправитель, чтобы красиво прижать сообщение
+        if "Система:" in msg:
+            messages_html += f'<div class="msg-wrapper center"><div class="msg-item system">{msg}</div></div>'
+        else:
+            messages_html += f'<div class="msg-wrapper"><div class="msg-item user">{msg}</div></div>'
 
     return f"""
     <!DOCTYPE html>
@@ -34,28 +38,35 @@ def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Factor X Messenger</title>
         <style>
-            body {{ background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 20px; }}
-            .container {{ max-width: 400px; margin: 0 auto; }}
-            .card {{ border: 1px solid #333; padding: 20px; background: #1e1e1e; border-radius: 10px; margin-bottom: 20px; }}
-            h2 {{ margin-top: 0; color: #4CAF50; }}
-            input {{ width: 85%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 5px; color: white; margin-bottom: 10px; font-size: 14px; }}
-            button {{ padding: 10px 20px; background: #4CAF50; border: none; border-radius: 5px; color: white; cursor: pointer; font-weight: bold; width: 90%; }}
-            .notes-list {{ text-align: left; background: #252525; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; margin-bottom: 10px; }}
-            .note-item {{ border-bottom: 1px solid #333; padding: 5px 0; font-size: 14px; color: #fff; }}
-            .room-badge {{ display: inline-block; background: #ff9800; color: black; padding: 3px 8px; border-radius: 3px; font-weight: bold; font-size: 12px; }}
+            body {{ background: #0e1621; color: white; font-family: sans-serif; text-align: center; padding: 15px; margin: 0; }}
+            .container {{ max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; }}
+            .card {{ border: 1px solid #101c2b; padding: 15px; background: #17212b; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }}
+            h2 {{ margin-top: 0; color: #5288c1; font-size: 22px; }}
+            input {{ width: 85%; padding: 12px; background: #24313f; border: 1px solid #1c2a38; border-radius: 8px; color: white; margin-bottom: 10px; font-size: 14px; outline: none; }}
+            input:focus {{ border-color: #5288c1; }}
+            button {{ padding: 12px 20px; background: #5288c1; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; width: 90%; font-size: 14px; }}
+            
+            /* СТИЛИ ЛЕНТЫ ТЕЛЕГРАМ */
+            .notes-list {{ text-align: left; background: #0e1621; padding: 10px; border-radius: 10px; max-height: 280px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #1c2a38; }}
+            .msg-wrapper {{ display: flex; width: 100%; }}
+            .msg-wrapper.center {{ justify-content: center; }}
+            
+            .msg-item {{ padding: 8px 14px; border-radius: 12px; font-size: 14px; max-width: 75%; word-break: break-word; line-height: 1.4; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }}
+            .msg-item.system {{ background: rgba(36, 51, 67, 0.6); color: #7f9fc2; font-size: 12px; text-align: center; border-radius: 8px; padding: 4px 10px; }}
+            .msg-item.user {{ background: #182533; border: 1px solid #203040; border-bottom-left-radius: 4px; color: #f5f5f5; }}
+            
+            .room-badge {{ display: inline-block; background: #2f6ea7; color: white; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; }}
             .hidden {{ display: none; }}
-            .logout-btn {{ background: #ff5252; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 10px; font-weight: bold; width: auto; display: inline-block; }}
-            .logout-btn:hover {{ background: #e04444; }}
-            .admin-card {{ border: 2px dashed #ff5252; background: #2a1a1a; }}
-            .admin-btn {{ background: #ff5252; width: auto; padding: 8px 15px; font-size: 12px; }}
+            .logout-btn {{ background: #ec5b5b; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 10px; font-weight: bold; width: auto; display: inline-block; }}
+            .admin-card {{ border: 1px dashed #ec5b5b; background: #241a1a; }}
+            .admin-btn {{ background: #ec5b5b; width: auto; padding: 8px 15px; font-size: 12px; border-radius: 6px; }}
         </style>
-    </head>
-    <body>
+    </head> <body>
         <div class="container">
             
             <!-- СЕКРЕТНАЯ ПАНЕЛЬ АДМИНИСТРАТОРА -->
             <div id="adminPanel" class="card admin-card hidden">
-                <h3 style="color: #ff5252; margin-top: 0;">👑 Панель Создателя</h3>
+                <h3 style="color: #ec5b5b; margin-top: 0;">👑 Панель Создателя</h3>
                 <p style="font-size: 13px; color: #aaa;">Вам доступно управление сервером Factor X.</p>
                 <button onclick="clearAllServerData()" class="admin-btn">💥 Очистить все чаты</button>
             </div>
@@ -66,34 +77,36 @@ def home():
                 <p>Введите имя и пароль для входа или создания аккаунта</p>
                 <input type="text" id="usernameInput" placeholder="Ваш никнейм...">
                 <input type="password" id="passwordInput" placeholder="Ваш пароль...">
-                <button onclick="loginOrRegister()" style="background: #24A1DE;">Войти / Создать аккаунт</button>
-                <p id="authError" style="color: #ff5252; font-size: 12px; margin-top: 10px;"></p>
+                <button onclick="loginOrRegister()" style="background: #24a1de; width: auto; padding: 12px 30px;">Войти / Создать</button>
+                <p id="authError" style="color: #ec5b5b; font-size: 12px; margin-top: 10px;"></p>
             </div>
 
             <!-- ИНТЕРФЕЙС МЕССЕНДЖЕРА -->
             <div id="mainScreen" class="hidden">
                 <div class="card">
-                    <h2>Factor X</h2>
-                    <p style="margin-bottom: 5px;">
-                        Привет, <span id="userBadge" style="color: #4CAF50; font-weight: bold;"></span>!
+                    <h2 style="margin-bottom: 10px;">Factor X</h2>
+                    <p style="margin: 0; font-size: 14px; color: #aaa;">
+                        Привет, <span id="userBadge" style="color: #5288c1; font-weight: bold;"></span>!
                         <button onclick="logoutWithPassword()" class="logout-btn">Выйти</button>
                     </p>
-                    <p>Комната: <span class="room-badge">#{room_id}</span></p>
+                    <p style="margin: 8px 0 0 0; font-size: 14px;">Комната: <span class="room-badge">#{room_id}</span></p>
                 </div>
 
                 <div class="card">
-                    <h3>🔑 Сменить чат</h3>
-                    <input type="text" id="roomInput" placeholder="Имя секретного чата...">
-                    <button onclick="changeRoom()" style="background: #ff9800; color: black; width: auto;">Перейти</button>
+                    <h3 style="margin-top: 0; font-size: 16px; color: #5288c1;">🔑 Сменить чат</h3>
+                    <input type="text" id="roomInput" placeholder="Имя секретного чата..." style="margin-bottom: 8px;">
+                    <button onclick="changeRoom()" style="background: #2f6ea7; color: white; width: auto; padding: 8px 20px;">Перейти</button>
                 </div>
 
-                <div class="card">
-                    <h3>💬 Чат комнаты</h3>
+                <div class="card" style="flex-grow: 1;">
+                    <h3 style="margin-top: 0; font-size: 16px; color: #5288c1;">💬 Чат комнаты</h3>
                     <div class="notes-list" id="notesContainer">
                         {messages_html}
                     </div>
-                    <input type="text" id="msgInput" placeholder="Введите сообщение...">
-                    <button onclick="sendToServer()">Отправить</button>
+                    <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
+                        <input type="text" id="msgInput" placeholder="Введите сообщение..." style="margin: 0; width: 70%;">
+                        <button onclick="sendToServer()" style="width: auto; padding: 12px 15px;">🚀</button>
+                    </div>
                 </div>
             </div>
 
@@ -110,28 +123,29 @@ def home():
                 document.getElementById('mainScreen').classList.remove('hidden');
                 document.getElementById('userBadge').innerText = username;
                 
-                // Проверка ника суперадмина
                 if (username === 'TornadoSOS') {{
                     document.getElementById('adminPanel').classList.remove('hidden');
                 }} else {{
                     document.getElementById('adminPanel').classList.add('hidden');
                 }}
+                
+                // Прокрутка чата вниз при загрузке
+                const container = document.getElementById('notesContainer');
+                container.scrollTop = container.scrollHeight;
             }}
 
             async function clearAllServerData() {{
                 if (!confirm("Вы уверены, что хотите сбросить ВСЕ сообщения на сервере?")) return;
-                
                 const response = await fetch('/admin/clear', {{ method: 'POST' }});
                 const result = await response.json();
                 if (result.status === 'success') {{
-                    alert("Все чаты успешно очищены!");
                     location.reload();
                 }}
             }}
 
             async function logoutWithPassword() {{
                 const currentUser = localStorage.getItem('fx_user');
-                const passwordCheck = prompt("Безопасный выход! Введите ваш текущий пароль для подтверждения:");
+                const passwordCheck = prompt("Введите ваш текущий пароль для подтверждения выхода:");
                 if (passwordCheck === null) return;
 
                 const response = await fetch('/auth', {{
@@ -145,7 +159,7 @@ def home():
                     localStorage.removeItem('fx_user');
                     location.reload();
                 }} else {{
-                    alert("Ошибка! Неверный пароль. Выход заблокирован.");
+                    alert("Неверный пароль!");
                 }}
             }}
 
