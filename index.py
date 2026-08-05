@@ -1,5 +1,6 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
+import database
 
 app = Flask(__name__)
 
@@ -8,28 +9,26 @@ def clean_room_name(name):
         return "main"
     return str(name).strip().lower().replace(" ", "-")
 
-users_db = {
-    "TornadoSOS": {"password": "123", "display_name": "Создатель Factor X", "avatar": "👑"},
-    "Shirin": {"password": "123", "display_name": "Shirin", "avatar": "✨"}
-}
-rooms_db = {
-    "main": ["Система: Добро пожаловать в главный чат Factor X!"]
-}
-
 @app.route('/')
 def home():
-    room_name = request.args.get('room', 'main')
-    room_id = clean_room_name(room_name)
+    # Берем комнату из ссылки
+    r_name = request.args.get('room', 'main')
+    room_id = clean_room_name(r_name)
     
-    if room_id not in rooms_db:
-        rooms_db[room_id] = [f"Система: Создана комната #{room_id}"]
+    # Если комнаты нет в базе — создаем её
+    if room_id not in database.rooms_db:
+        sys_msg = f"Система: Создана комната #{room_id}"
+        database.rooms_db[room_id] = [sys_msg]
         
+    # Генерируем HTML-код для сообщений
     messages_html = ""
-    for msg in rooms_db[room_id]:
+    for msg in database.rooms_db[room_id]:
         if "Система:" in msg:
             messages_html += f'<div class="msg-wrapper center"><div class="msg-item system">{msg}</div></div>'
         else:
             messages_html += f'<div class="msg-wrapper"><div class="msg-item user">{msg}</div></div>'
+            
+    # Тут ниже должен идти твой return """<!DOCTYPE html>...""" со всем дизайном HTML
 
     return """
     <!DOCTYPE html>
