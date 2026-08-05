@@ -1,13 +1,26 @@
 import os
 from flask import Flask, request, jsonify, render_template_string
 import database
-
+import messages
 app = Flask(__name__)
 
 def clean_room_name(name):
     if not name:
         return "main"
     return str(name).strip().lower().replace(" ", "-")
+@app.route('/api/send_message', methods=['POST'])
+def send_message():
+        data = request.json
+    if not data:
+        return jsonify({"status": "error"}), 400
+    r_id = clean_room_name(data.get('room', 'main'))
+    snd = data.get('sender', 'Аноним')
+    txt = data.get('text', '')
+    res, status = messages.add_new_message(r_id, snd, txt)
+    return jsonify(res), status
+
+
+
 
 @app.route('/')
 def home():
