@@ -1,5 +1,12 @@
 import os
+import sys
 from flask import Flask, request, jsonify, render_template
+
+# Этот кусок кода заставляет Vercel железно видеть файлы database.py и messages.py
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 import database
 import messages
 
@@ -12,9 +19,7 @@ def clean_room_name(name):
 
 @app.route('/api/send_message', methods=['POST'])
 def send_message():
-    data = request.json
-    if not data:
-        return jsonify({"status": "error"}), 400
+    data = request.json or {}
     r_id = clean_room_name(data.get('room', 'main'))
     snd = data.get('sender', 'Аноним')
     txt = data.get('text', '')
