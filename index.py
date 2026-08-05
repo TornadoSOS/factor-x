@@ -8,7 +8,6 @@ def clean_room_name(name):
         return "main"
     return str(name).strip().lower().replace(" ", "-")
 
-# Расширенная база данных: теперь храним пароль, имя и эмодзи-аватарку пользователя
 users_db = {
     "TornadoSOS": {"password": "123", "display_name": "Создатель Factor X", "avatar": "👑"},
     "Shirin": {"password": "123", "display_name": "Shirin", "avatar": "✨"}
@@ -32,7 +31,7 @@ def home():
         else:
             messages_html += f'<div class="msg-wrapper"><div class="msg-item user">{msg}</div></div>'
 
-    return f"""
+    return """
     <!DOCTYPE html>
     <html lang="ru">
     <head>
@@ -40,62 +39,142 @@ def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Factor X Messenger</title>
         <style>
-            /* НЕОНОВЫЙ ХАКЕРСКИЙ ДИЗАЙН FACTOR X */
-            body {{ background: #0b0f17; color: #e2e8f0; font-family: sans-serif; margin: 0; padding: 0; }}
-            .container {{ max-width: 420px; margin: 0 auto; background: #121824; min-height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0, 230, 118, 0.1); }}
-            
-            /* ВЕРХНЯЯ ПАНЕЛЬ С НЕОНОВЫМ ПОДСВЕЧИВАНИЕМ */
-            .header {{ padding: 15px; background: #121824; border-bottom: 1px solid #1f293d; text-align: left; }}
-            .header-title {{ font-size: 22px; font-weight: bold; margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; color: #00e676; text-shadow: 0 0 10px rgba(0, 230, 118, 0.3); }}
-            .search-bar {{ width: 90%; padding: 10px 14px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 14px; outline: none; margin-bottom: 10px; transition: 0.3s; }}
-            .search-bar:focus {{ border-color: #00e676; box-shadow: 0 0 10px rgba(0, 230, 118, 0.2); }}
-            
-            /* ВКЛАДКИ */
-            .tabs {{ display: flex; gap: 20px; padding: 0 15px 10px 15px; border-bottom: 1px solid #1f293d; font-size: 14px; color: #64748b; font-weight: bold; }}
-            .tab.active {{ color: #00e676; border-bottom: 2px solid #00e676; padding-bottom: 5px; }}
-            
-            /* СКРУГЛЕННЫЕ КВАДРАТЫ В СТИЛЕ IOS ДЛЯ ОТЛИЧИЯ ОТ ТЕЛЕГРАМА */
-            .chats-list {{ display: flex; flex-direction: column; }}
-            .chat-row {{ display: flex; align-items: center; padding: 14px 15px; border-bottom: 1px solid #1f293d; cursor: pointer; text-align: left; transition: 0.2s; }}
-            .chat-row:hover {{ background: #1e293b; }}
-            .avatar {{ width: 46px; height: 46px; border-radius: 12px; background: #00e676; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; margin-right: 15px; color: #0b0f17; box-shadow: 0 2px 8px rgba(0, 230, 118, 0.2); }}
-            .chat-info {{ flex-grow: 1; }}
-            .chat-name {{ font-weight: bold; font-size: 15px; margin-bottom: 4px; color: #f8fafc; }}
-            .chat-last-msg {{ font-size: 13px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }}
-            .badge {{ background: #00e676; color: #0b0f17; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: bold; }}
-
-            /* ОКНО ЧАТА */
-            .chat-window {{ display: flex; flex-direction: column; height: 100vh; background: #0b0f17; }}
-            .chat-header {{ background: #121824; padding: 12px 15px; display: flex; align-items: center; border-bottom: 1px solid #1f293d; text-align: left; }}
-            .notes-list {{ flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #0b0f17; }}
-            .msg-wrapper {{ display: flex; width: 100%; }}
-            .msg-wrapper.center {{ justify-content: center; }}
-            .msg-item {{ padding: 10px 14px; border-radius: 12px; font-size: 14px; max-width: 75%; word-break: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }}
-            .msg-item.system {{ background: rgba(30, 41, 59, 0.8); color: #94a3b8; font-size: 11px; border-radius: 8px; border: 1px solid #334155; }}
-            .msg-item.user {{ background: #1e293b; border: 1px solid #334155; border-bottom-left-radius: 4px; color: #f8fafc; }}
-            .input-panel {{ display: flex; gap: 8px; padding: 12px; background: #12121a; border-top: 1px solid #1f293d; }}
-            
-            /* КНОПКИ НАСТРОЕК ПРОФИЛЯ */
-            .setting-input {{ width: 85%; padding: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: white; margin-bottom: 12px; font-size: 14px; }}
-            .setting-input:focus {{ border-color: #00e676; }}
-            .btn-green {{ padding: 10px 20px; background: #00e676; border: none; border-radius: 8px; color: #0b0f17; cursor: pointer; font-weight: bold; width: auto; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 230, 118, 0.2); }}
-            .btn-green:hover {{ background: #00c853; }}
-            
-            .hidden {{ display: none; }}
-            .admin-card {{ border: 1px dashed #ff5252; background: #241414; padding: 12px; margin: 12px; border-radius: 10px; }}
-            .admin-btn {{ background: #ff5252; color: white; width: auto; padding: 8px 16px; font-size: 12px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; }}
+            body { background: #0b0f17; color: #e2e8f0; font-family: sans-serif; margin: 0; padding: 0; }
+            .container { max-width: 420px; margin: 0 auto; background: #121824; min-height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0, 230, 118, 0.1); }
+            .header { padding: 15px; background: #121824; border-bottom: 1px solid #1f293d; text-align: left; }
+            .header-title { font-size: 22px; font-weight: bold; margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; color: #00e676; text-shadow: 0 0 10px rgba(0, 230, 118, 0.3); }
+            .search-bar { width: 90%; padding: 10px 14px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 14px; outline: none; margin-bottom: 10px; }
+            .tabs { display: flex; gap: 20px; padding: 0 15px 10px 15px; border-bottom: 1px solid #1f293d; font-size: 14px; color: #64748b; font-weight: bold; }
+            .tab { cursor: pointer; padding-bottom: 5px; }
+            .tab.active { color: #00e676; border-bottom: 2px solid #00e676; }
+            .chats-list { display: flex; flex-direction: column; }
+            .chat-row { display: flex; align-items: center; padding: 14px 15px; border-bottom: 1px solid #1f293d; cursor: pointer; text-align: left; }
+            .chat-row:hover { background: #1e293b; }
+            .avatar { width: 46px; height: 46px; border-radius: 12px; background: #00e676; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; margin-right: 15px; color: #0b0f17; }
+            .chat-info { flex-grow: 1; }
+            .chat-name { font-weight: bold; font-size: 15px; margin-bottom: 4px; color: #f8fafc; }
+            .chat-last-msg { font-size: 13px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+            .badge { background: #00e676; color: #0b0f17; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: bold; }
+            .chat-window { display: flex; flex-direction: column; height: 100vh; background: #0b0f17; }
+            .chat-header { background: #121824; padding: 12px 15px; display: flex; align-items: center; border-bottom: 1px solid #1f293d; text-align: left; }
+            .notes-list { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #0b0f17; }
+            .msg-wrapper { display: flex; width: 100%; }
+            .msg-wrapper.center { justify-content: center; }
+            .msg-item { padding: 10px 14px; border-radius: 12px; font-size: 14px; max-width: 75%; word-break: break-word; }
+            .msg-item.system { background: rgba(30, 41, 59, 0.8); color: #94a3b8; font-size: 11px; border-radius: 8px; border: 1px solid #334155; }
+            .msg-item.user { background: #1e293b; border: 1px solid #334155; border-bottom-left-radius: 4px; color: #f8fafc; }
+            .input-panel { display: flex; gap: 8px; padding: 12px; background: #12121a; border-top: 1px solid #1f293d; }
+            .setting-input { width: 85%; padding: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: white; margin-bottom: 12px; font-size: 14px; }
+            .btn-green { padding: 10px 20px; background: #00e676; border: none; border-radius: 8px; color: #0b0f17; cursor: pointer; font-weight: bold; width: auto; font-size: 14px; }
+            .hidden { display: none; }
+            .admin-card { border: 1px dashed #ff5252; background: #241414; padding: 12px; margin: 12px; border-radius: 10px; }
+            .admin-btn { background: #ff5252; color: white; width: auto; padding: 8px 16px; font-size: 12px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; }
         </style>
     </head>
+    """.replace("{messages_html}", messages_html).replace("{room_id}", room_id)
+@app.route('/get_user_profile', methods=['GET'])
+def get_user_profile():
+    username = request.args.get('username')
+    if username in users_db:
+        return jsonify({
+            "status": "success",
+            "display_name": users_db[username].get('display_name', username),
+            "avatar": users_db[username].get('avatar', '🥷')
+        })
+    return jsonify({"status": "error", "message": "Пользователь не найден"})
+
+@app.route('/search_users', methods=['GET'])
+def search_users():
+    query = request.args.get('query', '').strip().lower()
+    found_users = []
+    if query:
+        for u_name, u_data in users_db.items():
+            if query in u_name.lower() or query in u_data.get('display_name', '').lower():
+                found_users.append({
+                    "username": u_name,
+                    "display_name": u_data.get('display_name', u_name),
+                    "avatar": u_data.get('avatar', '🥷')
+                })
+    return jsonify({"status": "success", "users": found_users})
+
+@app.route('/update_profile', methods=['POST'])
+def update_profile():
+    data = request.json or {}
+    user = data.get('username')
+    new_name = data.get('display_name', '').strip()
+    new_ava = data.get('avatar', '').strip()
+    old_pass = data.get('old_password', '').strip()
+    new_pass = data.get('new_password', '').strip()
+
+    if user not in users_db:
+        return jsonify({"status": "error", "message": "Ошибка профиля!"})
+    if users_db[user]["password"] != old_pass:
+        return jsonify({"status": "error", "message": "Неверный старый пароль!"})
+
+    if new_name: users_db[user]["display_name"] = new_name
+    if new_ava: users_db[user]["avatar"] = new_ava
+    if new_pass: users_db[user]["password"] = new_pass
+
+    return jsonify({"status": "success", "message": "Настройки профиля сохранены!"})
+
+@app.route('/auth', methods=['POST'])
+def auth():
+    data = request.json or {}
+    user = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    
+    if not user or not password:
+        return jsonify({"status": "error", "message": "Пустые данные"})
+    if user in users_db:
+        if users_db[user]["password"] == password:
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"status": "error", "message": "Неверный пароль!"})
+    else:
+        users_db[user] = {"password": password, "display_name": user, "avatar": "🥷"}
+        return jsonify({"status": "success"})
+
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    data = request.json or {}
+    message_text = data.get('message')
+    room_id = clean_room_name(data.get('room', 'main'))
+    user = data.get('user', 'Аноним')
+    
+    if message_text:
+        if room_id not in rooms_db:
+            rooms_db[room_id] = []
+        disp_name = users_db.get(user, {}).get('display_name', user)
+        avatar = users_db.get(user, {}).get('avatar', '🥷')
+        rooms_db[room_id].append(f"{avatar} {disp_name}: {message_text}")
+        return jsonify({"status": "success"})
+    return jsonify({"status": "error"})
+
+@app.route('/admin/clear', methods=['POST'])
+def admin_clear():
+    global rooms_db
+    rooms_db = {"main": ["Система: Все чаты были полностью очищены Суперадмином!"]}
+    return jsonify({"status": "success"})
+
+# Сюда твой 24-й сотрудник перенёс весь интерфейс в текстовом формате для Flask
+@app.after_request
+def add_header(r):
+    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    return r
+# Встраиваем HTML-код интерфейса
+HTML_TEMPLATE = """
     <body>
         <div class="container">
             
             <!-- ОКНО ВХОДА -->
-            <div id="authScreen" class="card" style="padding: 20px; margin: 20px; border-radius: 12px; background: #17212b; border: 1px solid #101c2b;">
+            <div id="authScreen" class="card" style="padding: 20px; margin: 20px; border-radius: 12px; background: #17212b; border: 1px solid #101c2b; text-align: center;">
                 <h2 style="color: #00e676;">Factor X 🔑</h2>
-                <p>Введите имя и пароль для входа в мессенджер</p>
-                <input type="text" id="usernameInput" placeholder="Ваш никнейм...">
-                <input type="password" id="passwordInput" placeholder="Ваш пароль...">
-                <button onclick="loginOrRegister()" style="background: #00e676; color: #0b0f17; width: auto; padding: 12px 30px; font-weight: bold; border: none; border-radius: 8px;">Войти</button>
+                <p>Введите имя и пароль для входа</p>
+                <input type="text" id="usernameInput" class="setting-input" placeholder="Ваш никнейм..." style="width: 85%;">
+                <input type="password" id="passwordInput" class="setting-input" placeholder="Ваш пароль..." style="width: 85%;">
+                <button onclick="loginOrRegister()" style="background: #00e676; color: #0b0f17; width: auto; padding: 12px 30px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">Войти</button>
                 <p id="authError" style="color: #ff5252; font-size: 12px; margin-top: 10px;"></p>
             </div>
 
@@ -106,19 +185,16 @@ def home():
                         <span>Factor X</span>
                         <span id="userBadgeHeader" style="color: #00e676; font-size: 14px;"></span>
                     </div>
-                    <!-- Живой поиск по пользователям -->
                     <input type="text" id="searchBarInput" class="search-bar" placeholder="Поиск по юзернейму..." oninput="filterChatsAndUsers()">
                     <div class="tabs">
-                        <div class="tab active">Все чаты</div>
-                        <div class="tab">Личные</div>
-                        <div class="tab">Новые</div>
+                        <div class="tab active" id="tab-all">Все чаты</div>
+                        <div class="tab" id="tab-private">Личные</div>
+                        <div class="tab" id="tab-new">Новые</div>
                     </div>
                 </div>
 
-                <!-- Список диалогов -->
                 <div class="chats-list" id="globalChatsList">
-                    <!-- БОТ 1: НАСТРОЙКИ И УПРАВЛЕНИЕ -->
-                    <div class="chat-row" onclick="openChat('management')">
+                    <div class="chat-row" id="row-management" onclick="openChat('management')">
                         <div class="avatar" style="background: #00e676;">⚙️</div>
                         <div class="chat-info">
                             <div class="chat-name">Factor X Настройки</div>
@@ -127,8 +203,7 @@ def home():
                         <div class="badge" style="background: #00e676;">⚙️</div>
                     </div>
 
-                    <!-- БОТ 2: ИЗБРАННОЕ -->
-                    <div class="chat-row" onclick="openChat('favorites')">
+                    <div class="chat-row" id="row-favorites" onclick="openChat('favorites')">
                         <div class="avatar" style="background: #ff9800;">⭐</div>
                         <div class="chat-info">
                             <div class="chat-name">Избранное</div>
@@ -137,8 +212,7 @@ def home():
                         <div class="badge">1</div>
                     </div>
 
-                    <!-- ГЛАВНЫЙ ОБЩИЙ ЧАТ -->
-                    <div class="chat-row" onclick="openChat('main')">
+                    <div class="chat-row" id="row-main" onclick="openChat('main')">
                         <div class="avatar" style="background: #2f6ea7; color: white;">FX</div>
                         <div class="chat-info">
                             <div class="chat-name">Hooligan's Chat (#main)</div>
@@ -146,7 +220,6 @@ def home():
                         </div>
                     </div>
                     
-                    <!-- Сюда JavaScript будет автоматически подставлять найденных пользователей -->
                     <div id="searchResultsBlock"></div>
                 </div>
             </div>
@@ -161,28 +234,21 @@ def home():
                     </div>
                 </div>
 
-                <!-- СЕКРЕТНАЯ ПАНЕЛЬ АДМИНИСТРАТОРА (ВНУТРИ ЧАТА НАСТРОЕК) -->
                 <div id="adminPanel" class="admin-card hidden">
                     <h3 style="color: #ff5252; margin-top: 0; font-size: 14px;">👑 Панель Создателя</h3>
                     <button onclick="clearAllServerData()" class="admin-btn">💥 Очистить все чаты</button>
                 </div>
 
-                <!-- НОВОЕ МЕНЮ НАСТРОЕК ПРОФИЛЯ -->
                 <div id="managementOptions" class="hidden" style="padding: 15px; text-align: left; background: #121824; margin: 10px; border-radius: 12px; border: 1px solid #1f293d;">
                     <h3 style="color: #00e676; margin-top: 0; font-size: 16px;">⚙️ Настройки аккаунта</h3>
-                    
                     <label style="font-size: 12px; color: #94a3b8;">Имя на экране:</label><br>
-                    <input type="text" id="editDisplayName" class="setting-input" placeholder="Новое имя..."><br>
-                    
+                    <input type="text" id="editDisplayName" class="setting-input"><br>
                     <label style="font-size: 12px; color: #94a3b8;">Эмодзи-аватарка:</label><br>
-                    <input type="text" id="editAvatar" class="setting-input" placeholder="Например: 😎, 🔥, 🥷..."><br>
-                    
+                    <input type="text" id="editAvatar" class="setting-input"><br>
                     <hr style="border: 0; border-top: 1px solid #1f293d; margin: 15px 0;">
-                    
                     <h4 style="color: #ff5252; margin: 0 0 10px 0; font-size: 14px;">🔑 Изменить пароль</h4>
                     <input type="password" id="oldPasswordInput" class="setting-input" placeholder="Старый пароль..."><br>
                     <input type="password" id="newPasswordInput" class="setting-input" placeholder="Новый пароль..."><br>
-                    
                     <div style="text-align: center; margin-top: 10px; display: flex; gap: 10px; justify-content: center;">
                         <button onclick="updateProfileSettings()" class="btn-green">Сохранить</button>
                         <button onclick="logoutWithPassword()" style="background: #ff5252; color: white;" class="btn-green">Выйти</button>
@@ -190,76 +256,97 @@ def home():
                     <p id="settingsStatus" style="font-size: 12px; text-align: center; margin-top: 10px; color: #00e676;"></p>
                 </div>
 
-                <!-- ЛЕНТА СООБЩЕНИЙ ЧАТА -->
                 <div class="notes-list" id="notesContainer">
                     {messages_html}
                 </div>
 
-                <!-- ПАНЕЛЬ ОТПРАВКИ -->
                 <div class="input-panel" id="inputPanelBlock">
                     <input type="text" id="msgInput" placeholder="Введите сообщение..." style="margin: 0; width: 75%;">
-                    <button onclick="sendToServer()" style="width: auto; padding: 12px 18px; background: #00e676; color: #0b0f17; border: none; border-radius: 8px; font-weight: bold;">🚀</button>
+                    <button onclick="sendToServer()" style="width: auto; padding: 12px 18px; background: #00e676; color: #0b0f17; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">🚀</button>
                 </div>
             </div>
 
         </div>
+"""
+# Финальный блок со скриптами JavaScript, встроенный в HTML-шаблон приложения
+INTERFACE_SCRIPTS = """
         <script>
             const savedUser = localStorage.getItem('fx_user');
-            if (savedUser) {{
+            if (savedUser) {
                 showChatsScreen(savedUser);
-            }}
+            }
 
-            function showChatsScreen(username) {{
+            function showChatsScreen(username) {
                 document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('chatsScreen').classList.remove('hidden');
                 document.getElementById('chatWindowScreen').classList.add('hidden');
                 document.getElementById('userBadgeHeader').innerText = "@" + username;
-                
-                // Загружаем текущие имя и аватарку в поля настроек профиля
                 loadProfileFields(username);
-            }}
+                setupTabs();
+            }
 
-            // Подгрузка данных в поля настроек
-            async function loadProfileFields(username) {{
+            function setupTabs() {
+                const tabs = [
+                    {el: document.getElementById('tab-all'), view: 'all'},
+                    {el: document.getElementById('tab-private'), view: 'private'},
+                    {el: document.getElementById('tab-new'), view: 'new'}
+                ];
+                
+                tabs.forEach(tab => {
+                    if(!tab.el) return;
+                    tab.el.onclick = function() {
+                        tabs.forEach(t => t.el.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const mng = document.getElementById('row-management');
+                        const fav = document.getElementById('row-favorites');
+                        const mainChat = document.getElementById('row-main');
+                        const searchBlock = document.getElementById('searchResultsBlock');
+
+                        if (tab.view === 'private') {
+                            if(mng) mng.style.display = 'none';
+                            if(fav) fav.style.display = 'none';
+                            if(mainChat) mainChat.style.display = 'none';
+                            searchBlock.style.display = 'block';
+                        } else if (tab.view === 'new') {
+                            if(mng) mng.style.display = 'none';
+                            if(fav) fav.style.display = 'none';
+                            if(mainChat) mainChat.style.display = 'none';
+                            searchBlock.style.display = 'none';
+                        } else {
+                            if(mng) mng.style.display = 'flex';
+                            if(fav) fav.style.display = 'flex';
+                            if(mainChat) mainChat.style.display = 'flex';
+                            searchBlock.style.display = 'block';
+                        }
+                    };
+                });
+            }
+
+            async function loadProfileFields(username) {
                 const response = await fetch('/get_user_profile?username=' + encodeURIComponent(username));
                 const data = await response.json();
-                if (data.status === 'success') {{
+                if (data.status === 'success') {
                     document.getElementById('editDisplayName').value = data.display_name;
                     document.getElementById('editAvatar').value = data.avatar;
-                }}
-            }}
+                }
+            }
 
-            // УМНАЯ СИСТЕМА ФИЛЬТРАЦИИ И ПОИСКА ПОЛЬЗОВАТЕЛЕЙ
-            async function filterChatsAndUsers() {{
+            async function filterChatsAndUsers() {
                 const query = document.getElementById('searchBarInput').value.trim().toLowerCase();
-                const rows = document.querySelectorAll('.chat-row');
                 const resultsBlock = document.getElementById('searchResultsBlock');
                 
-                if (!query) {{
-                    // Если строка поиска пустая, просто показываем стандартных ботов
-                    rows.forEach(row => row.style.display = 'flex');
+                if (!query) {
                     resultsBlock.innerHTML = '';
                     return;
-                }}
+                }
 
-                // Скрываем стандартные чаты, которые не подходят под поиск
-                rows.forEach(row => {{
-                    const name = row.querySelector('.chat-name').innerText.toLowerCase();
-                    if (name.includes(query)) {{
-                        row.style.display = 'flex';
-                    }} else {{
-                        row.style.display = 'none';
-                    }}
-                }});
-
-                // Делаем запрос к Python-серверу для живого поиска пользователей в базе
                 const response = await fetch('/search_users?query=' + encodeURIComponent(query));
                 const data = await response.json();
-                
                 resultsBlock.innerHTML = '';
-                if (data.status === 'success' && data.users.length > 0) {{
-                    data.users.forEach(user => {{
-                        // Создаем новую интерактивную строку для найденного пользователя
+                
+                if (data.status === 'success' && data.users.length > 0) {
+                    data.users.forEach(user => {
                         const row = document.createElement('div');
                         row.className = 'chat-row';
                         row.onclick = () => window.location.href = '/?room=private-' + user.username;
@@ -271,11 +358,11 @@ def home():
                             </div>
                         `;
                         resultsBlock.appendChild(row);
-                    }});
-                }}
-            }}
+                    });
+                }
+            }
 
-            function openChat(type) {{
+            function openChat(type) {
                 document.getElementById('chatsScreen').classList.add('hidden');
                 document.getElementById('chatWindowScreen').classList.remove('hidden');
                 
@@ -290,52 +377,45 @@ def home():
                 mngOptions.classList.add('hidden');
                 adminPanel.classList.add('hidden');
 
-                if (type === 'management') {{
+                if (type === 'management') {
                     chatName.innerText = "Factor X Настройки";
                     roomBadge.innerText = "system-settings";
                     inputBlock.classList.add('hidden'); 
                     mngOptions.classList.remove('hidden'); 
-                    
-                    if (currentUser === 'TornadoSOS') {{
-                        adminPanel.classList.remove('hidden');
-                    }}
-                }} else if (type === 'favorites') {{
+                    if (currentUser === 'TornadoSOS') adminPanel.classList.remove('hidden');
+                } else if (type === 'favorites') {
                     chatName.innerText = "Избранное";
                     roomBadge.innerText = "favorites";
                     const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.get('room') !== 'favorites') {{
-                        window.location.href = '/?room=favorites';
-                    }}
-                }} else {{
+                    if (urlParams.get('room') !== 'favorites') window.location.href = '/?room=favorites';
+                } else {
                     chatName.innerText = "Hooligan's Chat";
                     roomBadge.innerText = "main";
                     const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.get('room') !== 'main' && urlParams.get('room') !== null) {{
-                        window.location.href = '/?room=main';
-                    }}
-                }}
+                    if (urlParams.get('room') !== 'main' && urlParams.get('room') !== null) window.location.href = '/?room=main';
+                }
 
                 const container = document.getElementById('notesContainer');
                 container.scrollTop = container.scrollHeight;
-            }}
+            }
 
             const urlParams = new URLSearchParams(window.location.search);
             const currentRoom = urlParams.get('room') || 'main';
-            if (savedUser && (currentRoom === 'favorites' || currentRoom.startsWith('private-') || window.location.search.includes('room'))) {{
+            if (savedUser && (currentRoom === 'favorites' || currentRoom.startsWith('private-') || window.location.search.includes('room'))) {
                 showChatsScreen(savedUser);
                 if (currentRoom === 'favorites') openChat('favorites');
                 else openChat('main');
-            }}
+            }
 
-            function backToChats() {{
+            function backToChats() {
                 const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('room') === 'favorites' || urlParams.get('room').startsWith('private-')) {{
+                if (urlParams.get('room') === 'favorites' || urlParams.get('room').startsWith('private-')) {
                     window.location.href = '/'; 
-                }} else {{
+                } else {
                     showChatsScreen(localStorage.getItem('fx_user'));
-                }}
-            }}
-            // ФУНКЦИЯ СОХРАНЕНИЯ НАСТРОЕК ПРОФИЛЯ С ПРОВЕРКОЙ СТАРОГО ПАРОЛЯ
+                }
+            }
+
             async function updateProfileSettings() {
                 const currentUser = localStorage.getItem('fx_user');
                 const newName = document.getElementById('editDisplayName').value.trim();
@@ -346,7 +426,7 @@ def home():
 
                 if (!oldPass) {
                     statusBlock.style.color = '#ff5252';
-                    statusBlock.innerText = "Для изменений введите текущий пароль!";
+                    statusBlock.innerText = "Введите текущий пароль!";
                     return;
                 }
 
@@ -354,11 +434,7 @@ def home():
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        username: currentUser,
-                        display_name: newName,
-                        avatar: newAva,
-                        old_password: oldPass,
-                        new_password: newPass
+                        username: currentUser, display_name: newName, avatar: newAva, old_password: oldPass, new_password: newPass
                     })
                 });
 
@@ -377,9 +453,7 @@ def home():
                 if (!confirm("Вы уверены, что хотите сбросить ВСЕ сообщения на сервере?")) return;
                 const response = await fetch('/admin/clear', { method: 'POST' });
                 const result = await response.json();
-                if (result.status === 'success') {
-                    window.location.href = '/';
-                }
+                if (result.status === 'success') window.location.href = '/';
             }
 
             async function logoutWithPassword() {
@@ -387,171 +461,3 @@ def home():
                 const passwordCheck = prompt("Введите ваш текущий пароль для подтверждения выхода:");
                 if (passwordCheck === null) return;
 
-                const response = await fetch('/auth', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: currentUser, password: passwordCheck })
-                });
-
-                const result = await response.json();
-                if (result.status === 'success') {
-                    localStorage.removeItem('fx_user');
-                    window.location.href = '/';
-                } else {
-                    alert("Неверный пароль!");
-                }
-            }
-
-            async function loginOrRegister() {
-                const user = document.getElementById('usernameInput').value.trim();
-                const pass = document.getElementById('passwordInput').value.trim();
-                const errorBlock = document.getElementById('authError');
-
-                if (!user || !pass) {
-                    errorBlock.innerText = "Заполните все поля!";
-                    return;
-                }}
-
-                const response = await fetch('/auth', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, password: pass })
-                });
-
-                const result = await response.json();
-                if (result.status === 'success') {
-                    localStorage.setItem('fx_user', user);
-                    showChatsScreen(user);
-                } else {
-                    errorBlock.innerText = result.message;
-                }
-            }
-
-            async function sendToServer() {
-                const input = document.getElementById('msgInput');
-                const text = input.value.trim();
-                if (!text) return;
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const currentRoom = urlParams.get('room') || 'main';
-                const currentUser = localStorage.getItem('fx_user') || 'Аноним';
-
-                const response = await fetch('/send_message', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text, room: currentRoom, user: currentUser })
-                });
-
-                const result = await response.json();
-                if (result.status === 'success') {
-                    location.reload();
-                }
-            }
-        </script>
-    </body>
-    </html>
-    """
-
-# БЭКЕНД: ПОЛУЧЕНИЕ ДАННЫХ ПРОФИЛЯ ПРИ ЗАГРУЗКЕ
-@app.route('/get_user_profile', methods=['GET'])
-def get_user_profile():
-    username = request.args.get('username')
-    if username in users_db:
-        return jsonify({
-            "status": "success",
-            "display_name": users_db[username].get('display_name', username),
-            "avatar": users_db[username].get('avatar', '🥷')
-        })
-    return jsonify({"status": "error", "message": "Пользователь не найден"})
-
-# БЭКЕНД: ЖИВОЙ ПОИСК ПОЛЬЗОВАТЕЛЕЙ ПО БАЗЕ PYTHON
-@app.route('/search_users', methods=['GET'])
-def search_users():
-    query = request.args.get('query', '').strip().lower()
-    found_users = []
-    
-    if query:
-        for u_name, u_data in users_db.items():
-            if query in u_name.lower() or query in u_data.get('display_name', '').lower():
-                found_users.append({
-                    "username": u_name,
-                    "display_name": u_data.get('display_name', u_name),
-                    "avatar": u_data.get('avatar', '🥷')
-                })
-                
-    return jsonify({"status": "success", "users": found_users})
-
-# БЭКЕНД: ОБНОВЛЕНИЕ НАСТРОЕК (НИК, АВА, ПАРОЛЬ) С ПРОВЕРКОЙ БЕЗОПАСНОСТИ
-@app.route('/update_profile', methods=['POST'])
-def update_profile():
-    data = request.json or {}
-    user = data.get('username')
-    new_name = data.get('display_name', '').strip()
-    new_ava = data.get('avatar', '').strip()
-    old_pass = data.get('old_password', '').strip()
-    new_pass = data.get('new_password', '').strip()
-
-    if user not in users_db:
-        return jsonify({"status": "error", "message": "Ошибка профиля!"})
-
-    # Проверяем старый пароль
-    if users_db[user]["password"] != old_pass:
-        return jsonify({"status": "error", "message": "Старый пароль введен неверно!"})
-
-    # Если проверка пройдена, обновляем имя и аватарку
-    if new_name:
-        users_db[user]["display_name"] = new_name
-    if new_ava:
-        users_db[user]["avatar"] = new_ava
-        
-    # Если пользователь захотел сменить пароль и ввел новый
-    if new_pass:
-        users_db[user]["password"] = new_pass
-        return jsonify({"status": "success", "message": "Профиль и пароль успешно изменены!"})
-
-    return jsonify({"status": "success", "message": "Настройки профиля сохранены!"})
-
-@app.route('/auth', methods=['POST'])
-def auth():
-    data = request.json or {}
-    user = data.get('username', '').strip()
-    password = data.get('password', '').strip()
-    
-    if not user or not password:
-        return jsonify({"status": "error", "message": "Пустые данные"})
-    if user in users_db:
-        if users_db[user]["password"] == password:
-            return jsonify({"status": "success"})
-        else:
-            return jsonify({"status": "error", "message": "Неверный пароль!"})
-    else:
-        # При создании нового аккаунта даем ему имя по умолчанию и аватарку-ниндзя
-        users_db[user] = {"password": password, "display_name": user, "avatar": "🥷"}
-        return jsonify({"status": "success"})
-
-@app.route('/send_message', methods=['POST'])
-def send_message():
-    data = request.json or {}
-    message_text = data.get('message')
-    room_id = clean_room_name(data.get('room', 'main'))
-    user = data.get('user', 'Аноним')
-    
-    if message_text:
-        if room_id not in rooms_db:
-            rooms_db[room_id] = []
-        
-        # Получаем красивое имя автора сообщения из базы данных
-        disp_name = users_db.get(user, {}).get('display_name', user)
-        avatar = users_db.get(user, {}).get('avatar', '🥷')
-        
-        rooms_db[room_id].append(f"{avatar} {disp_name}: {message_text}")
-        return jsonify({"status": "success"})
-    return jsonify({"status": "error"})
-
-@app.route('/admin/clear', methods=['POST'])
-def admin_clear():
-    global rooms_db
-    rooms_db = {
-        "main": ["Система: Все чаты были полностью очищены Суперадмином!"]
-    }
-    return jsonify({"status": "success"})
